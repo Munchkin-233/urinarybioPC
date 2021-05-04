@@ -1,5 +1,4 @@
-# urinarybioPC
-Predicting Pancreatic Cancer Using Urinary Biomarkers
+# Predicting Pancreatic Cancer Using Urinary Biomarkers
 
 ### Brief desciption of research question and methods
 In this project, we sought to predict PDAC with four urine biomarkers (creatinine, LYVE1, REG1B and TFF1), with machine learning methods including logistic regression, Linear Discriminant Analysis(LDA) and Quantitative Discriminant Analysis(QDA). To evaluate the three models, area under curve for ROC curves, as well as test errors on testing subset of data, were compared.  
