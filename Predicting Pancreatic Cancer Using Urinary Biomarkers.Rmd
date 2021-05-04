@@ -1,0 +1,159 @@
+---
+title: "2338 Final Project"
+author: "Helen Yang/Yao Xin"
+date: "3/13/2021"
+output: pdf_document
+---
+
+```{r}
+rm(list=ls())
+
+#read in data from your computer
+library(readr)
+deb2020 <- read_csv("Your own path/Debernardi et al 2020 data.csv")
+```
+
+
+```{r descriptive statistics}
+#recode diagnosis
+deb2020$DIAG <- as.factor(ifelse(deb2020$diagnosis=="3",1,0))
+deb2020$DIAG <-  ordered(deb2020$DIAG , levels = c(0,1), 
+                            labels = c("Control/Benign", "PDAC"))
+
+#recode sex
+deb2020$sex1[deb2020$sex=="F"]<-2
+deb2020$sex1[deb2020$sex=="M"]<-1
+deb2020$sex1 <-  ordered(deb2020$sex1 , levels = c(1,2), 
+                            labels = c("Male", "Female"))
+
+summary(deb2020$age)
+
+p<-ggplot(deb2020, aes(x=as.numeric(age),fill=sex))+
+  geom_histogram(stat="count", width=0.9, fill="steelblue")+
+  theme_minimal()+
+  labs(title="Age Distribution in the Debernardi2020 sample")
+p+scale_x_continuous(name="Age", breaks=c(20,40,60,80,100))
+
+
+table1<-table(deb2020$sex1)
+table1
+prop.table(table1)
+
+library(ggplot2)
+ggplot(deb2020, aes(x=factor(sex1),fill=sex))+
+  geom_bar(stat="count", width=0.3, fill="steelblue")+
+  theme_minimal()+
+  labs(x = "Gender", title="Gender Frequencies in the Debernardi2020 sample")
+
+
+table1<-table(deb2020$DIAG)
+table1
+prop.table(table1)
+
+
+ggplot(deb2020, aes(x=factor(DIAG),fill=DIAG))+
+  geom_bar(stat="count", width=0.3, fill="steelblue")+
+  theme_minimal()+
+  labs(x = "Diagnosis", title="PDAC diagnosis in the Debernardi2020 sample")
+
+
+table3<-table(deb2020$stage)
+table3
+prop.table(table3)
+ggplot(data=subset(deb2020,!is.na(stage)), aes(x=factor(stage),fill=DIAG))+
+  geom_bar(stat="count", width=0.3, fill="steelblue")+
+  theme_minimal()+
+  labs(x = "Stage", title="PDAC stages among 199 malignant patients in the Debernardi2020 sample")
+
+
+cor.test(deb2020$DIAG, deb2020$creatinine, method="pearson")
+
+cor.test(deb2020$DIAG, deb2020$LYVE1, method="pearson")
+
+cor.test(deb2020$DIAG, deb2020$REG1A, method="pearson")
+
+cor.test(deb2020$DIAG, deb2020$TFF1, method="pearson")
+```
+
+```{r}
+set.seed(1)
+
+index = sample(1:590)
+train_ind = index[1:(590*80/100)]
+test_ind = index[(590*80/100+1):590]
+train = deb2020[train_ind,]
+test = deb2020[test_ind,]  # randomly choose 80% as training set and 20% as testing set
+```
+
+
+```{r data visualization}
+library(ggplot2)
+deb2020$DIAG <- as.factor(deb2020$diagnosis)
+deb2020$diagnosis <-  ordered(deb2020$diagnosis , levels = c(1,2,3), 
+                            labels = c("Control", "Benign", "Malignant"))
+
+ggplot(data = deb2020, aes(x = age , y = creatinine , shape = DIAG ,color = DIAG)) + geom_point() + geom_text(aes(label=diagnosis), vjust = -0.8) 
+
+ggplot(data = deb2020, aes(x = age , y = LYVE1 , shape = DIAG ,color = DIAG)) + geom_point() + geom_text(aes(label=diagnosis), vjust = -0.8) 
+
+ggplot(data = deb2020, aes(x = age , y = REG1B , shape = DIAG ,color = DIAG)) + geom_point() + geom_text(aes(label=diagnosis), vjust = -0.8) 
+
+ggplot(data = deb2020, aes(x = age , y = TFF1 , shape = DIAG ,color = DIAG)) + geom_point() + geom_text(aes(label=diagnosis), vjust = -0.8) 
+```
+
+
+```{r  logistic regression}
+# logistic regression
+#library(nnet)
+library(pROC)
+log.fit <- glm(DIAG~creatinine+LYVE1+REG1B+TFF1+age+sex, data=train,family = 'binomial')
+summary(log.fit)
+
+log.pred <- predict(log.fit, newdata = test, type = 'response')
+log.pred.class = ifelse(log.pred > 0.5, 1, 0)
+
+table <- table(test$DIAG, log.pred.class)
+table
+
+test_roc = roc(test$DIAG~log.pred,plot = TRUE, print.auc = TRUE)
+test_roc 
+title(main = "ROC curve for distinguishing PDAC from control/benign with logistic regression")
+
+sum(diag(prop.table(table)))
+
+```
+
+
+```{r LDA}
+library('MASS')
+lda.fit <- lda(DIAG~creatinine+LYVE1+REG1B+TFF1+sex+age, data = train)
+lda.fit
+
+lda_pred <- predict(lda.fit, newdata = test, type = 'response')
+newgroup <- lda_pred$class
+tab <- table(test$DIAG,newgroup)
+plot(tab)
+accuracy <- sum(diag(prop.table(tab)))
+accuracy
+
+
+roc(test$DIAG,lda_pred$posterior[,2],plot=TRUE, legacy.axes = TRUE, print.auc = TRUE, 
+percent =TRUE, xlab="Sensitivity", ylab="Specificity", main = "ROC curve for distinguishing PDAC from control/benign with LDA")
+
+```
+
+```{r QDA}
+qda.fit <- qda(DIAG~creatinine+LYVE1+REG1B+TFF1+sex+age, data = train)
+qda.fit
+
+qda_pred <- predict(qda.fit, newdata = test, type = 'response')
+newgroup2 <- qda_pred$class
+tab2 <- table(test$DIAG,newgroup2)
+plot(tab2)
+accuracy2 <- sum(diag(prop.table(tab2)))
+accuracy2
+
+roc(test$DIAG,qda_pred$posterior[,2],plot=TRUE, legacy.axes = TRUE, print.auc = TRUE, 
+percent =TRUE, xlab="Sensitivity", ylab="Specificity", main = "ROC curve for distinguishing PDAC from control/benign with QDA")
+
+```
