@@ -31,7 +31,7 @@ deb2020$diagnosis <- ordered(deb2020$diagnosis , levels = c(1,2,3), labels = c("
 deb2020$sex1<-NA
 deb2020$sex1[deb2020$sex=="F"]<-2
 deb2020$sex1[deb2020$sex=="M"]<-1
-deb2020$sex1 <- ordered(deb2020$sex1 , levels = c(1,2),                            labels = c("Male", "Female"))
+deb2020$sex1 <- ordered(deb2020$sex1 , levels = c(1,2), labels = c("Male", "Female"))
 ```
 
 
